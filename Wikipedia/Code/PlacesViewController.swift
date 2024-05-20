@@ -435,12 +435,16 @@ class PlacesViewController: ViewController, UISearchBarDelegate, ArticlePopoverV
         let coordinates: [CLLocationCoordinate2D] =  articles.compactMap({ (article) -> CLLocationCoordinate2D? in
             return article.coordinate
         })
-        guard coordinates.count > 1 else {
-            return coordinates.wmf_boundingRegion(with: 10000)
+        return region(thatFits: coordinates)
+    }
+    
+    func region(thatFits location: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
+        guard location.count > 1 else {
+            return location.wmf_boundingRegion(with: 10000)
         }
         
-        let initialRegion = coordinates.wmf_boundingRegion(with: 50)
-        return coordinates.wmf_boundingRegion(with: 0.25 * initialRegion.width)
+        let initialRegion = location.wmf_boundingRegion(with: 50)
+        return location.wmf_boundingRegion(with: 0.25 * initialRegion.width)
     }
     
     // MARK: - Searching
@@ -1949,6 +1953,20 @@ class PlacesViewController: ViewController, UISearchBarDelegate, ArticlePopoverV
         let displayTitle = article.displayTitle ?? title
         let searchResult = MWKSearchResult(articleID: 0, revID: 0, title: title, displayTitle: displayTitle, displayTitleHTML: displayTitleHTML, wikidataDescription: article.wikidataDescription, extract: article.snippet, thumbnailURL: article.thumbnailURL, index: nil, titleNamespace: nil, location: article.location)
         currentSearch = PlaceSearch(filter: .top, type: .location, origin: .user, sortStyle: .links, string: nil, region: region, localizedDescription: title, searchResult: searchResult, siteURL: articleURL.wmf_site)
+    }
+    
+    @objc public func showLocation(_ userInfo: [String: Any]) {
+        guard let latString = userInfo["lat"] as? String,
+              let longString = userInfo["long"] as? String,
+              let lat = Double(latString),
+              let long = Double(longString) else {
+            return
+        }
+        let location = CLLocationCoordinate2DMake(lat, long)
+
+        let region = self.region(thatFits: [location])
+        
+        currentSearch = PlaceSearch(filter: .top, type: .location, origin: .user, sortStyle: .links, string: nil, region: region, localizedDescription: nil, searchResult: nil, siteURL: nil)
     }
     
     fileprivate func searchForFirstSearchSuggestion() {
